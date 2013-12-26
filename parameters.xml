@@ -1,0 +1,440 @@
+<parameters>
+<!--  WordPress parameters.xml file
+	This file has been updated to incorporate a number of
+	improvements since the original was released with the WebPI and
+	WebDeploy Release Candidates.  These improvements will be
+	available with the RTW versions of the WebPI and WebDeploy.
+
+	There will be commentary at each section to describe the changes
+	and why they were made.  All of the additional functionality
+	described here, and available with the RTW, is documented as
+	part of the updated Web Application Packaging Guide.
+-->
+
+<!--  One of the new features provides for localization of text
+	strings within the parameters.xml file.  This localization can
+	be applied to "description" and "friendlyName" attributes of a
+	parameter.
+
+	There are ten (10) well known parameters which are identified by
+	their tags.  For these ten (10) parameters, the Web Deployment
+	Tool will automatically generate the correct description and
+	friendly name for each of ten (10) locales.  These locales and
+	the details of the translation mechanism are documented in the
+	updated Packaging Guide.
+
+	NOTE: If a well known parameter has a description or a
+	friendlyName set, the Web Deployment Tool will not apply any
+	default text.
+
+	NOTE: There are a few parameters for WordPress which are not
+	in the list of well known parameters.  These parameters have
+	English descriptions and friendlyNames only.  Please refer to
+	the updated Packaging Guide for information on providing
+	additional translations for these parameters.
+-->
+
+
+<!--  The Application Path parameter is one of the ten well known
+	parameters which have descriptions and friendly names
+	automatically available.
+-->
+
+<parameter
+	name="AppPath"
+	defaultValue="Default Web Site/wordpress"
+	tags="iisapp"
+	>
+	<parameterEntry
+	type="ProviderPath"
+	scope="iisapp"
+	match="wordpress"
+	/>
+</parameter>
+
+
+<!-- Database Parameters
+	The tags provided here tells the UI being used what type of
+	parameter this is.  The UI can then construct an appropriate
+	dialog for the database parameters, or fill them in if the user
+	doesn't need to provide them
+-->
+
+<!-- This parameter prompts the user for the database server name.
+	Note that this parameter has only one parameterEntry element.
+	This parameter is used with the configuration file and the
+	connection string.  It is not used within the SQL script itself
+	like some of the other parameters are.
+-->
+
+
+<parameter
+	name="DbServer"
+	defaultValue="localhost"
+	tags="MySQL,dbServer"
+	/>
+<parameter
+	name="Automatic Database Server PHP File"
+	defaultValue="define('DB_HOST', '{DbServer}');"
+	tags="Hidden, MySQL"
+	>
+	<parameterEntry 
+	type="TextFile"
+	scope="wp-config.php$"
+	match="define\('DB_HOST', '[^']*'\);"
+	/>
+</parameter>
+
+<!-- This parameter prompts the user for the database name.
+-->
+<parameter
+	name="DbName"
+	defaultValue="wordpress"
+	tags="MySQL,dbName"
+	>
+	<parameterEntry
+	type="TextFile"
+	scope="install.sql"
+	match="PlaceholderForDbName"
+	/>
+</parameter>
+<parameter 
+	name="Automatic Database Name PHP File"
+	defaultValue="define('DB_NAME', '{DbName}');"
+	tags="Hidden, MySQL"
+	>
+	<parameterEntry
+	type="TextFile"
+	scope="wp-config.php$"
+	match="define\('DB_NAME', '[^']*'\);"
+	/>
+</parameter>
+
+<!-- This parameter prompts the user for the database username. We
+	have set a validation RegEx on this parameter, as MySQL will not
+	accept a username that has more than 16 characters.
+-->
+<parameter
+	name="DbUsername"
+	defaultValue="wordpressuser"
+	tags="MySQL,DbUsername"
+	>
+	<parameterValidation
+	type="RegularExpression"
+	validationString="^\w{1,16}$"
+	/>
+	<parameterEntry
+	type="TextFile"
+	scope="install.sql"
+	match="PlaceholderForDbUsername"
+	/>
+</parameter>
+<parameter
+	name="Automatic Database Username PHP File"
+	defaultValue="define('DB_USER', '{DbUsername}');"
+	tags="Hidden,MySQL"
+	>
+	<parameterEntry
+	type="TextFile"
+	scope="wp-config.php$"
+	match="define\('DB_USER', '[^']*'\);"
+	/>
+</parameter>
+
+<!-- This parameter prompts the user for the database user's password.
+-->
+<parameter
+	name="DbPassword"
+	tags="New,Password,MySQL,DbUserPassword"
+	>
+	<parameterEntry
+	type="TextFile"
+	scope="install.sql"
+	match="PlaceholderForDbPassword"
+	/>
+</parameter>
+<parameter
+	name="Automatic Database Password PHP File"
+	defaultValue="define('DB_PASSWORD', '{DbPassword}');"
+	tags="Hidden, MySQL"
+	>
+	<parameterEntry
+	type="TextFile"
+	scope="wp-config.php$"
+	match="define\('DB_PASSWORD', '[^']*'\);"
+	/>
+</parameter>
+
+
+<!-- Prompts for the admin creds and uses it for the administrator
+	connection string. This is used to create a login and assign
+	permissions. The MySQL tag indicates it is a parameter required
+	for MySQL.  The DbAdminUsername tag indicates it should be used
+	when the user is creating a new database. If they're not, it
+	can be filled in with the DbUsername value.  The UI should be
+	able to figure out whether or not the user needs to be prompted
+	for this.
+-->
+
+<parameter
+	name="DbAdminUsername"
+	defaultValue="root"
+	tags="MySQL,DbAdminUsername"
+	>
+</parameter>
+
+<!-- Prompts for the admin password and uses it for the administrator
+	 connection string.
+-->
+<parameter
+	name="DbAdminPassword"
+	description="Password for the database administrator account."
+	tags="Password,MySQL,DbAdminPassword"
+	>
+</parameter>
+
+<!-- This is the hidden admin connection string used to run the
+	database scripts.  Note that this connection string is just
+	used here, and will probably be different from the connection
+	string that is used by the application itself.
+
+	The "Validate" tag tells the WebPI to validate that this
+	Connection String works prior to performing the rest of the
+	installation.
+-->
+
+<parameter
+	name="Connection String"
+	defaultValue="Server={DbServer};Database={DbName};uid={DbAdminUsername};Pwd={DbAdminPassword};"
+	tags="Hidden,MySQLConnectionString,Validate,MySQL"
+	>
+	<parameterEntry
+	type="ProviderPath"
+	scope="dbmysql"
+	match="install.sql"
+	/>
+</parameter>
+
+
+<!-- WordPress specific parameters -->
+
+<!-- Authentication Unique Keys and Salts -->
+
+<!-- AUTH_KEY -->
+
+<!-- Single quotes and back slashes are not allowed in the key and salt values. Combination of $ with other characters are breaking the replacement in wp-config. Ex: $_ , $` , $+ . So adding the regex to validate $ symbol.  -->
+
+<parameter
+	name="Authentication Key"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen your password. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Auth Key PHP File"
+	defaultValue="define('AUTH_KEY',         '{Authentication Key}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('AUTH_KEY',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- SECURE_AUTH_KEY -->
+
+<parameter
+	name="Secure Authentication Key"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen secure password. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Secure Auth Key PHP File"
+	defaultValue="define('SECURE_AUTH_KEY',  '{Secure Authentication Key}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('SECURE_AUTH_KEY',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- LOGGED_IN_KEY -->
+
+<parameter 
+	name="Logged In Key"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen authentication. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Logged In Key PHP File"
+	defaultValue="define('LOGGED_IN_KEY',    '{Logged In Key}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('LOGGED_IN_KEY',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- NONCE_KEY -->
+
+<parameter
+	name="Nonce Key"
+	defaultValue="put your unique phrase here"
+	description="It is used to sign the nonce key which protects the nonce from being generated, protecting you from certain forms of attacks where a hacker attempts to guess the nonce. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Nonce Key PHP File"
+	defaultValue="define('NONCE_KEY',        '{Nonce Key}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('NONCE_KEY',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- AUTH_SALT -->
+
+<parameter 
+	name="Authentication Salt"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen your password. Salt is an addition to the secret keys. They work with the keys. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Auth Salt PHP File"
+	defaultValue="define('AUTH_SALT',        '{Authentication Salt}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('AUTH_SALT',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- SECURE_AUTH_SALT -->
+
+<parameter
+	name="Secure Authentication Salt"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen secure password. Salt is an addition to the secret keys. They work with the keys. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Secure Auth Salt PHP File"
+	defaultValue="define('SECURE_AUTH_SALT', '{Secure Authentication Salt}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('SECURE_AUTH_SALT',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- LOGGED_IN_SALT -->
+
+<parameter
+	name="Logged In Salt"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen authentication. Salt is an addition to the secret keys. They work with the keys. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Logged In Salt PHP File"
+	defaultValue="define('LOGGED_IN_SALT',   '{Logged In Salt}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('LOGGED_IN_SALT',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- NONCE_SALT -->
+
+<parameter
+	name="Nonce Salt"
+	defaultValue="put your unique phrase here"
+	description="Unique phrase used to strengthen authentication. Salt is an addition to the secret keys. They work with the keys. It should not contain single quotes, backslashes and dollar character."
+	tags="NoStore"
+	>
+	<parameterValidation
+		type="RegularExpression"
+		validationString="^[^\\'$]*$"
+		/>
+</parameter>
+<parameter
+	name="Automatic Nonce Salt PHP File"
+	defaultValue="define('NONCE_SALT',       '{Nonce Salt}');"
+	tags="Hidden, NoStore"
+	>
+	<parameterEntry
+		type="TextFile"
+		scope="wp-config.php$"
+		match="define\('NONCE_SALT',\s*'[^']*'\);"
+		/>
+</parameter>
+
+<!-- Set the correct path for the ACL based on the AppPath selected
+	by the user.
+-->
+
+<parameter
+	name="SetAclParameter1"
+	defaultValue="{AppPath}/wp-content"
+	tags="Hidden"
+	>
+	<parameterEntry
+	type="ProviderPath"
+	scope="setAcl"
+	match="wordpress/wp-content$"
+	/>
+</parameter>
+</parameters>
